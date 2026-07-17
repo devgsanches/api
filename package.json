@@ -5,7 +5,11 @@
   "author": "",
   "private": true,
   "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
+    "prebuild": "prisma generate",
     "build": "nest build",
     "format": "biome format --write ./src",
     "lint": "biome check ./src",

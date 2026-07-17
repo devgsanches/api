@@ -1,0 +1,40 @@
+name: keepalive
+
+# Render's free tier spins a service down after 15 minutes of inactivity, and
+# the next request then waits ~50s for a cold start. Pinging /health keeps it
+# warm. /health touches no database, so the Neon compute stays suspended and
+# burns no CU-hours.
+#
+# Needs the repository variable API_URL (Settings > Secrets and variables >
+# Actions > Variables), e.g. https://devclub-api.onrender.com
+#
+# GitHub disables scheduled workflows after 60 days without commits. If the
+# deploy has to outlive that, move this ping to an external cron instead.
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /health
+        run: |
+          if [ -z "${{ vars.API_URL }}" ]; then
+            echo "::error::Repository variable API_URL is not set."
+            exit 1
+          fi
+
+          code=$(curl -sS -o /tmp/body.txt -w '%{http_code}' \
+                   --max-time 90 --retry 2 --retry-delay 15 \
+                   "${{ vars.API_URL }}/health")
+
+          echo "HTTP $code"
+          cat /tmp/body.txt
+
+          if [ "$code" != "200" ]; then
+            echo "::error::Health check failed with HTTP $code"
+            exit 1
+          fi
