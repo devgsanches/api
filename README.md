@@ -2,7 +2,7 @@
 
 API REST do desafio de agendamento: autenticação, catálogo de serviços, disponibilidade de horários, agendamentos do cliente e área administrativa.
 
-O frontend (`painel`, Next.js) vive em um repositório separado - veja [Links](#links).
+O frontend (`painel`, Next.js) está em um repositório separado - [Links](https://github.com/devgsanches/panel).
 
 ---
 
