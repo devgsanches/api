@@ -1,0 +1,120 @@
+
+@baseUrl = http://localhost:3333
+@apiUrl = {{baseUrl}}/v1
+@date = 2026-07-20
+
+# Preenchidos automaticamente após rodar os logins abaixo
+@token = {{login.response.body.access_token}}
+@adminToken = {{adminLogin.response.body.access_token}}
+
+
+# Health Check (sem versão, para o healthcheck do deploy)
+GET {{baseUrl}}/health
+
+### Documentação Swagger
+GET {{baseUrl}}/docs
+
+# Área do Cliente (rotas públicas)
+
+### Lista de serviços
+GET {{apiUrl}}/services
+
+### Disponibilidade do dia
+GET {{apiUrl}}/availability?date={{date}}
+
+
+# Autenticação
+
+### Cadastro de cliente (sempre cria role USER) - 409 se o email já existir
+# @name register
+POST {{apiUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Guilherme Sanches",
+  "email": "guilherme@example.com",
+  "phone": "(11) 93149-1332",
+  "password": "senha123"
+}
+
+### Login do cliente - 401 se as credenciais estiverem erradas
+# @name login
+POST {{apiUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "guilherme@example.com",
+  "password": "senha123"
+}
+
+### Login do admin (credencial do .env, usuário criado pelo seed)
+# @name adminLogin
+POST {{apiUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@devclub.com",
+  "password": "admin123"
+}
+
+### Dados do usuário logado
+GET {{apiUrl}}/auth/me
+Authorization: Bearer {{token}}
+
+
+# Agendamentos do cliente (exigem login)
+
+### Criar agendamento - o cliente vem do token, não do body
+# 400 se dados inválidos (serviço/horário/data) - 409 se o slot já estiver ocupado
+# @name createBooking
+POST {{apiUrl}}/bookings
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "service": "consulta-inicial",
+  "date": "{{date}}",
+  "time": "13:00"
+}
+
+### Buscar agendamento por id (usado na confirmação)
+# Só o dono ou um admin conseguem ler - outros recebem 404
+GET {{apiUrl}}/bookings/{{createBooking.response.body.id}}
+Authorization: Bearer {{token}}
+
+### Meus agendamentos
+GET {{apiUrl}}/me/bookings
+Authorization: Bearer {{token}}
+
+### Cancelar o próprio agendamento (libera o slot) - 404 se não for o dono
+PATCH {{apiUrl}}/me/bookings/{{createBooking.response.body.id}}/cancel
+Authorization: Bearer {{token}}
+
+
+# Área Administrativa (exige role ADMIN - cliente comum recebe 403)
+
+### Listar agendamentos - todos, com filtros opcionais por data e status
+# Filtros opcionais: ?date=YYYY-MM-DD e/ou ?status=SCHEDULED|CONFIRMED|COMPLETED|CANCELLED
+GET {{apiUrl}}/admin/bookings?date={{date}}
+Authorization: Bearer {{adminToken}}
+
+### Listar agendamentos filtrando por status
+GET {{apiUrl}}/admin/bookings?status=SCHEDULED
+Authorization: Bearer {{adminToken}}
+
+### Alterar status do agendamento (valida a transição - 422 se inválida)
+PATCH {{apiUrl}}/admin/bookings/{{createBooking.response.body.id}}/status
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "status": "CONFIRMED"
+}
+
+### Excluir agendamento (204)
+DELETE {{apiUrl}}/admin/bookings/{{createBooking.response.body.id}}
+Authorization: Bearer {{adminToken}}
+
+### Cliente comum tentando acessar a área admin -> 403
+GET {{apiUrl}}/admin/bookings
+Authorization: Bearer {{token}}
