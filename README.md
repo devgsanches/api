@@ -1,98 +1,159 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Agendamento de Serviços - API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+API REST do desafio de agendamento: autenticação, catálogo de serviços, disponibilidade de horários, agendamentos do cliente e área administrativa.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+O frontend (`painel`, Next.js) vive em um repositório separado - veja [Links](#links).
 
-## Description
+---
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Tecnologias utilizadas
 
-## Project setup
+| Camada | Escolha |
+|---|---|
+| Runtime | Node.js 20+ |
+| Framework | NestJS 11 |
+| Banco | PostgreSQL 16 (Docker no ambiente local) |
+| ORM | Prisma 7, com driver adapter `@prisma/adapter-pg` |
+| Autenticação | JWT (`@nestjs/jwt`) + Passport (`passport-jwt`), senha com bcrypt |
+| Validação | `class-validator` + `class-transformer` via `ValidationPipe` global |
+| Documentação | Swagger (`@nestjs/swagger`), servida em `/docs` |
+| Datas | `date-fns` + `date-fns-tz` |
+| Testes | Vitest, incluindo testes de integração contra Postgres real e e2e HTTP com Supertest |
+| Lint/format | Biome |
 
-```bash
-$ pnpm install
-```
+---
 
-## Compile and run the project
+## Rodando localmente
+
+Pré-requisitos: Node.js 20+, pnpm e Docker.
 
 ```bash
-# development
-$ pnpm run start
+# 1. Instalar dependências
+pnpm install
 
-# watch mode
-$ pnpm run start:dev
+# 2. Configurar as variáveis de ambiente
+cp .env.example .env
 
-# production mode
-$ pnpm run start:prod
+# 3. Subir o Postgres (usuário/senha já batem com o .env.example)
+docker compose up -d
+
+# 4. Gerar o client do Prisma e aplicar as migrations
+pnpm prisma:generate
+pnpm prisma:migrate
+
+# 5. Popular o banco (cria o admin, clientes demo e agendamentos de exemplo)
+pnpm db:seed
+
+# 6. Subir a API
+pnpm start:dev
 ```
 
-## Run tests
+A API sobe em `http://localhost:3333`.
+
+### Variáveis de ambiente
+
+| Variável | Para quê |
+|---|---|
+| `PORT` | Porta HTTP (padrão `3333`) |
+| `CORS_ORIGIN` | Origens liberadas, separadas por vírgula. `*` libera todas |
+| `DATABASE_URL` | Conexão com o Postgres |
+| `JWT_SECRET` | Segredo de assinatura do token — **trocar em produção** |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Credenciais do admin criado pelo seed |
+
+### Outros comandos
 
 ```bash
-# unit tests
-$ pnpm run test
-
-# e2e tests
-$ pnpm run test:e2e
-
-# test coverage
-$ pnpm run test:cov
+pnpm test        # suíte completa (precisa do Postgres no ar)
+pnpm lint        # Biome
+pnpm build       # build de produção
 ```
 
-## Deployment
+---
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+## a API
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+Duas formas de percorrer a API sem precisar do frontend. **Comece por aqui.**
 
-```bash
-$ pnpm install -g @nestjs/mau
-$ mau deploy
+### 🔎 Swagger — `http://localhost:3333/docs`
+
+Documentação interativa, traz os 12 endpoints versionados, os schemas de request/response e os códigos de erro de cada rota. O `/health` fica fora da doc de propósito - é healthcheck de infra, não superfície pública.
+
+Para testar rotas autenticadas:
+
+1. `POST /v1/auth/login` com uma das [credenciais abaixo](#credenciais-de-acesso) → copie o `access_token` da resposta.
+2. Clique em **Authorize** (canto superior direito), cole o token e confirme.
+3. As rotas protegidas passam a responder — inclusive as de admin, se o token for do administrador.
+
+### 📄 `client.http` — o fluxo completo, na ordem
+
+Na raiz do repositório. Abre com a extensão **REST Client** (VS Code / Cursor) e cobre **todas as rotas na ordem do fluxo real**, do cadastro à exclusão pelo admin.
+
+O detalhe que o torna prático: **os tokens se preenchem sozinhos**. Rodar `# @name login` e `# @name adminLogin` alimenta as variáveis `{{token}}` e `{{adminToken}}`, e o id do agendamento criado encadeia nas requisições seguintes:
+
+```http
+@baseUrl = http://localhost:3333
+@apiUrl = {{baseUrl}}/v1
+@date = 2026-07-20
+
+@token = {{login.response.body.access_token}}
+@adminToken = {{adminLogin.response.body.access_token}}
 ```
+---
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## Credenciais de acesso
 
-## Resources
+Criadas pelo `pnpm db:seed`.
 
-Check out a few resources that may come in handy when working with NestJS:
+**Administrador** - acessa a área administrativa:
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+| Email | Senha |
+|---|---|
+| `admin@devclub.com` | `admin123` |
 
-## Support
+**Clientes de exemplo** — senha `cliente123` para os três:
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+`ana@example.com` · `bruno@example.com` · `carla@example.com`
 
-## Stay in touch
+Qualquer conta criada pelo `/v1/auth/register` nasce com role `USER`. Não há como se cadastrar como admin pela API — a promoção só acontece via seed ou direto no banco.
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+---
 
-## License
+## Rotas
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+Tudo é versionado sob `/v1`. O `/health` é a exceção, propositalmente.
+
+| Método | Rota | Acesso |
+|---|---|---|
+| `GET` | `/health` | público, sem versão |
+| `GET` | `/v1/services` | público |
+| `GET` | `/v1/availability?date=YYYY-MM-DD` | público |
+| `POST` | `/v1/auth/register` | público |
+| `POST` | `/v1/auth/login` | público |
+| `GET` | `/v1/auth/me` | autenticado |
+| `POST` | `/v1/bookings` | autenticado |
+| `GET` | `/v1/bookings/:id` | dono ou admin |
+| `GET` | `/v1/me/bookings` | autenticado |
+| `PATCH` | `/v1/me/bookings/:id/cancel` | dono |
+| `GET` | `/v1/admin/bookings?date=&status=` | admin |
+| `PATCH` | `/v1/admin/bookings/:id/status` | admin |
+| `DELETE` | `/v1/admin/bookings/:id` | admin |
+
+---
+
+### Fuso horário
+
+Persistência em UTC, exibição em `America/Sao_Paulo`.
+
+### Modelagem: `Booking` referencia `User`
+
+### Organização
+
+Módulos por feature em `src/modules/`, transversais em `src/common/` (guards, decorators, filtros) e regra de negócio pura em `src/domain/` - esta última sem dependência de Nest nem de Prisma, o que a torna testável sem subir nada.
+
+Versionamento por URI (`/v1`) para permitir evoluir a API sem quebrar o painel. O `/health` fica fora da versão de propósito: healthcheck de deploy não deve depender de qual versão da API está no ar.
+
+Filtro global de exceções padroniza o corpo de erro (`statusCode`, `error`, `message`, `path`, `timestamp`).
+
+### Testes
+
+45 testes. Além dos unitários de domínio e DTO.
