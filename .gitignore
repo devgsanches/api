@@ -3,6 +3,14 @@
 /node_modules
 /build
 
+# Prisma generated client
+/src/generated
+
+# Stray compiled prisma.config (editor/tsc can emit these at the repo root)
+/prisma.config.js
+/prisma.config.js.map
+/prisma.config.d.ts
+
 # Logs
 logs
 *.log
@@ -54,3 +62,6 @@ pids
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Playwright MCP artifacts
+.playwright-mcp
